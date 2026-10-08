@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+
+permissions:
+  contents: write   # needed to create releases on tags
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester 5 and Inno Setup
+        run: |
+          Install-Module Pester -MinimumVersion 5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Check tag matches VERSION
+        if: github.ref_type == 'tag'
+        run: |
+          $version = (Get-Content VERSION -TotalCount 1).Trim()
+          if ($env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match the VERSION file ($version). Bump VERSION or retag."
+          }
+
+      - name: Build
+        run: .\build\build.ps1   # version comes from the VERSION file
+
+      - name: Test (unit, build and integration)
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TempFileEraserTool
+          path: dist/*
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME dist\TempFileEraserTool-Setup.exe dist\TempFileEraserTool-Script.zip --title $env:GITHUB_REF_NAME --generate-notes
