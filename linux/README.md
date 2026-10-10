@@ -20,7 +20,7 @@ Both editions install the same tool. Pick one; they refuse to coexist.
 **Package edition**
 
 ```bash
-sudo apt install ./temp-file-eraser-tool_0.0.1_all.deb
+sudo apt install ./temp-file-eraser-tool_*_all.deb
 nautilus -q    # only if Nautilus is already running
 ```
 

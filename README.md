@@ -20,7 +20,7 @@ managers are supported, and the handful of places the Linux behaviour deliberate
 from Windows.
 
 ```bash
-sudo apt install ./temp-file-eraser-tool_0.0.1_all.deb   # or: ./install.sh
+sudo apt install ./temp-file-eraser-tool_*_all.deb   # or: ./install.sh
 ```
 
 ## Windows: choose your edition
