@@ -31,7 +31,7 @@ DisableDirPage=yes
 MinVersion=10.0.17763
 ; 64-bit mode stops the 32-bit setup from rewriting System32 paths to SysWOW64
 ArchitecturesInstallIn64BitMode=x64compatible
-OutputDir=..\dist
+OutputDir=..\..\dist
 OutputBaseFilename=TempFileEraserTool-Setup
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={sys}\cleanmgr.exe,0
@@ -41,6 +41,8 @@ WizardStyle=modern
 
 [Files]
 Source: "..\src\*.ps1"; DestDir: "{app}"; Flags: ignoreversion
+; The detection rules, shared with the Linux edition
+Source: "..\..\rules\rules.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 ; Take over from a Script edition install (the menu keys themselves are overwritten below)

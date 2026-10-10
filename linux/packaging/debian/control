@@ -1,0 +1,18 @@
+Package: temp-file-eraser-tool
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: Filipe Lopes Pires <filipe.pires@dorier-group.com>
+Depends: python3 (>= 3.9), python3-gi, gir1.2-gtk-4.0
+Recommends: python3-nautilus
+Homepage: https://github.com/FilipeLopesPires/TempFileEraserTool
+Description: Erase regenerable temp, cache and build folders from the file manager
+ Right-click a folder and choose "Clean up temp and cache folders". The tool
+ searches every subfolder for things your tools can rebuild, such as
+ node_modules, Unity's Library, Unreal's Intermediate, __pycache__, bin/obj and
+ stray temp files, then lists them with their size for review.
+ .
+ Uncheck anything you want to keep, choose Move to Trash or Erase permanently,
+ and press Erase. System folders, installed application data, symlinks and other
+ filesystems are never touched.

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Temp File Eraser
+GenericName=Temp and cache folder cleaner
+Comment=Find and erase regenerable temp, cache and build folders
+Exec=temp-file-eraser %f
+Icon=user-trash
+Terminal=false
+Categories=Utility;Filesystem;
+MimeType=inode/directory;
+Keywords=temp;cache;build;clean;node_modules;
+# A context-menu action, not something to launch from the app grid. It still
+# appears under "Open With" for folders.
+NoDisplay=true

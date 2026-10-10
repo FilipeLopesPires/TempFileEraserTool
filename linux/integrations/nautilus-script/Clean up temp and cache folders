@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Nautilus script fallback, used when python3-nautilus is not installed.
+# Installed to ~/.local/share/nautilus/scripts; appears under the Scripts submenu.
+#
+# Nautilus sets NAUTILUS_SCRIPT_SELECTED_FILE_PATHS for a selection (one path per
+# line) and NAUTILUS_SCRIPT_CURRENT_URI for the folder being browsed.
+set -euo pipefail
+
+target=""
+if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}" ]]; then
+    target="$(head -n 1 <<< "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")"
+fi
+
+if [[ -z "$target" || ! -d "$target" ]]; then
+    if [[ -n "${NAUTILUS_SCRIPT_CURRENT_URI:-}" ]]; then
+        target="$(python3 -c 'import sys, urllib.parse; \
+            print(urllib.parse.unquote(urllib.parse.urlparse(sys.argv[1]).path))' \
+            "$NAUTILUS_SCRIPT_CURRENT_URI")"
+    fi
+fi
+
+[[ -d "$target" ]] || exit 0
+
+# ~/.local/bin is not on PATH until the next login after a fresh script-edition install
+if command -v temp-file-eraser >/dev/null 2>&1; then
+    exec temp-file-eraser "$target"
+fi
+exec "$HOME/.local/bin/temp-file-eraser" "$target"

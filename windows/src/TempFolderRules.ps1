@@ -9,6 +9,9 @@
     alternatives; an alternative that is itself a list needs all of its entries.
     Uncertain rules only apply when no Certain rule matched, and their rows start
     unchecked in the review window.
+
+    The table itself lives in rules.json, shared with the Linux edition so one
+    change updates both. Rule order matters, see Get-TempMatch.
 #>
 
 function New-TempRule {
@@ -31,66 +34,63 @@ function New-TempRule {
     }
 }
 
-$UnityMarker   = , @('Assets', 'ProjectSettings')
-$DotNetMarkers = @('*.csproj', '*.fsproj', '*.vbproj', '*.sln')
-$GradleMarkers = @('build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts')
+function Resolve-TempRulesPath {
+    # rules.json sits next to this script once installed, and in ..\..\rules in a clone
+    param([string]$ScriptRoot = $PSScriptRoot)
 
-$TempRules = @(
-    # Folders that are generated wherever they appear
-    New-TempRule Folder 'Node.js dependencies' 'node_modules'
-    New-TempRule Folder 'Web framework cache' '.next', '.nuxt', '.svelte-kit', '.parcel-cache', '.turbo', '.angular', '.docusaurus', '.expo', '.nx', '.wrangler', '.sass-cache'
-    New-TempRule Folder 'Test coverage output' '.nyc_output'
-    New-TempRule Folder 'Deployment build output' '.serverless', '.aws-sam', 'storybook-static'
-    New-TempRule Folder 'Python cache' '__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache', '.hypothesis', '.ipynb_checkpoints'
-    New-TempRule Folder 'Python test environments' '.tox', '.nox'
-    New-TempRule Folder 'Python package metadata' '*.egg-info'
-    New-TempRule Folder 'Gradle cache' '.gradle'
-    New-TempRule Folder 'CMake cache' 'CMakeFiles'
-    New-TempRule Folder 'Dart tool cache' '.dart_tool'
-    New-TempRule Folder 'Haskell build output' '.stack-work', 'dist-newstyle'
-    New-TempRule Folder 'Zig cache' '.zig-cache', 'zig-cache'
-    New-TempRule Folder 'Terraform providers' '.terraform'
-    New-TempRule Folder 'Jekyll cache' '.jekyll-cache'
-    New-TempRule Folder 'Swift package cache' '.swiftpm'
-    New-TempRule Folder 'IDE settings and cache' '.vs', '.idea'
-    New-TempRule Folder 'Python virtual environment' -InnerMarkers 'pyvenv.cfg'
+    foreach ($candidate in (Join-Path $ScriptRoot 'rules.json'), (Join-Path $ScriptRoot '..\..\rules\rules.json')) {
+        $full = [System.IO.Path]::GetFullPath($candidate)
+        if ([System.IO.File]::Exists($full)) { return $full }
+    }
+    throw "rules.json was not found next to TempFolderRules.ps1 or in ..\..\rules."
+}
 
-    # Folders that only count as generated inside a recognised project
-    New-TempRule Folder 'Node.js build output' 'dist', 'build', 'out', '.cache', '.output' -Markers 'package.json'
-    New-TempRule Folder 'Test coverage output' 'coverage' -Markers 'package.json'
-    New-TempRule Folder 'Python build output' 'build', 'dist' -Markers 'setup.py', 'setup.cfg', 'pyproject.toml'
-    New-TempRule Folder 'Unity generated files' 'Library', 'Temp', 'Obj', 'Logs' -Markers $UnityMarker
-    New-TempRule Folder 'Unity player build' 'Build', 'Builds' -Markers $UnityMarker
-    New-TempRule Folder 'Unreal generated files' 'Binaries', 'Intermediate', 'Saved', 'DerivedDataCache' -Markers '*.uproject', '*.uplugin'
-    New-TempRule Folder 'Godot import cache' '.godot', '.import' -Markers 'project.godot'
-    New-TempRule Folder '.NET build output' 'bin', 'obj' -Markers $DotNetMarkers
-    New-TempRule Folder 'Gradle build output' 'build', '.cxx', '.externalNativeBuild' -Markers $GradleMarkers
-    New-TempRule Folder 'Maven build output' 'target' -Markers 'pom.xml'
-    New-TempRule Folder 'Rust build output' 'target' -Markers 'Cargo.toml'
-    New-TempRule Folder 'CMake build output' 'cmake-build-*', 'build', 'out' -Markers 'CMakeLists.txt'
-    New-TempRule Folder 'Flutter build output' 'build' -Markers 'pubspec.yaml'
-    New-TempRule Folder 'Elixir build output' '_build', 'deps' -Markers 'mix.exs'
-    New-TempRule Folder 'PHP Composer dependencies' 'vendor' -Markers 'composer.json'
-    New-TempRule Folder 'Zig build output' 'zig-out' -Markers 'build.zig'
-    New-TempRule Folder 'Swift build output' '.build' -Markers 'Package.swift'
-    New-TempRule Folder 'CocoaPods dependencies' 'Pods' -Markers 'Podfile'
-    New-TempRule Folder 'Jekyll site output' '_site' -Markers '_config.yml'
+function ConvertTo-RuleNames {
+    # A missing key reads as $null, and a one-entry array as a bare string
+    param($Value)
 
-    # Generic names listed unchecked when no project file explains them
-    New-TempRule Folder 'Possible build output' 'bin', 'obj', 'build', 'dist', 'out', 'target', 'Intermediate' -Confidence Uncertain
-    New-TempRule Folder 'Possible temp folder' 'Temp' -Confidence Uncertain
-    New-TempRule Folder 'Possible cache' 'DerivedDataCache' -Confidence Uncertain
+    if ($null -eq $Value) { return @() }
+    return [string[]]@($Value)
+}
 
-    # Files. desktop.ini and backups (*.bak, *.orig, *.rej, *~) are left alone on purpose
-    New-TempRule File 'System thumbnail cache' 'Thumbs.db', 'ehthumbs.db', '.DS_Store', '._*'
-    New-TempRule File 'Editor lock or swap file' '~$*.doc*', '~$*.xls*', '~$*.ppt*', '*.swp', '*.swo', '.~lock.*#'
-    New-TempRule File 'Temporary file' '*.tmp'
-    New-TempRule File 'Tool cache file' '*.pyc', '*.pyo', '.eslintcache', '.stylelintcache', '*.tsbuildinfo', '.coverage', '.phpunit.result.cache'
-    New-TempRule File 'Debug log or crash dump' 'npm-debug.log*', 'yarn-error.log', 'pnpm-debug.log*', 'hs_err_pid*.log', '*.dmp', '*.stackdump'
-    New-TempRule File 'Unity generated project file' '*.sln', '*.csproj' -Markers $UnityMarker
-    New-TempRule File 'Unreal generated project file' '*.sln', '.vsconfig' -Markers '*.uproject'
-    New-TempRule File 'Log file' '*.log' -Confidence Uncertain
-)
+function ConvertTo-RuleMarkers {
+    # Keeps the nesting New-TempRule expects: an alternative is one pattern, or a
+    # list of patterns that must all be present
+    param($Value)
+
+    $markers = [System.Collections.Generic.List[object]]::new()
+    foreach ($alternative in @($Value)) {
+        if ($null -eq $alternative) { continue }
+        if ($alternative -is [string]) { $markers.Add($alternative) }
+        else { $markers.Add([string[]]@($alternative)) }
+    }
+    return , $markers.ToArray()
+}
+
+function Import-TempRules {
+    <#
+    .SYNOPSIS
+        Reads the rule table from rules.json.
+    .DESCRIPTION
+        Omitted keys take their defaults: no names, no markers, no inner markers,
+        and Certain confidence.
+    #>
+    param([Parameter(Mandatory)][string]$Path)
+
+    $document = [System.IO.File]::ReadAllText($Path) | ConvertFrom-Json
+    $rules = [System.Collections.Generic.List[object]]::new()
+    foreach ($entry in $document.rules) {
+        $confidence = if ($entry.confidence) { $entry.confidence } else { 'Certain' }
+        $rules.Add((New-TempRule -Kind $entry.kind -Category $entry.category `
+                    -Names (ConvertTo-RuleNames $entry.names) `
+                    -Markers (ConvertTo-RuleMarkers $entry.markers) `
+                    -InnerMarkers (ConvertTo-RuleNames $entry.innerMarkers) `
+                    -Confidence $confidence))
+    }
+    return , $rules.ToArray()
+}
+
+$TempRules = Import-TempRules (Resolve-TempRulesPath)
 
 function New-TempRuleIndex {
     # Sorts each rule name into the cheapest lookup that can find it: exact names and

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+# Compiled copies of the extension would otherwise outlive the package
+rm -f /usr/share/nautilus-python/extensions/__pycache__/temp-file-eraser-nautilus.*.pyc
+rm -rf /usr/lib/temp-file-eraser/tempfileeraser/__pycache__
+exit 0

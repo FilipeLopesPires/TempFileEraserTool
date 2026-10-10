@@ -10,7 +10,23 @@ permissions:
   contents: write   # needed to create releases on tags
 
 jobs:
-  build:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches VERSION
+        id: read
+        run: |
+          version=$(head -n 1 VERSION | tr -d '[:space:]')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_type }}" = "tag" ] && [ "${{ github.ref_name }}" != "v$version" ]; then
+            echo "Tag ${{ github.ref_name }} does not match the VERSION file ($version). Bump VERSION or retag." >&2
+            exit 1
+          fi
+
+  windows:
     runs-on: windows-latest
     defaults:
       run:
@@ -25,32 +41,72 @@ jobs:
             choco install innosetup -y --no-progress
           }
 
-      - name: Check tag matches VERSION
-        if: github.ref_type == 'tag'
-        run: |
-          $version = (Get-Content VERSION -TotalCount 1).Trim()
-          if ($env:GITHUB_REF_NAME -ne "v$version") {
-            throw "Tag $env:GITHUB_REF_NAME does not match the VERSION file ($version). Bump VERSION or retag."
-          }
-
       - name: Build
-        run: .\build\build.ps1   # version comes from the VERSION file
+        run: .\windows\build\build.ps1   # version comes from the VERSION file
 
       - name: Test (unit, build and integration)
         run: |
           $config = New-PesterConfiguration
-          $config.Run.Path = 'tests'
+          $config.Run.Path = 'windows\tests'
           $config.Run.Exit = $true
           $config.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $config
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TempFileEraserTool
+          name: windows-assets
           path: dist/*
 
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        # The two nautilus-python generations: 1.2.x on jammy, 4.x on noble
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi gir1.2-gtk-4.0 python3-nautilus xvfb dpkg-dev
+          python3 -m pip install --upgrade pytest
+
+      - name: Build
+        run: ./linux/build.sh   # version comes from the VERSION file
+
+      - name: Test (unit, GUI, install and build)
+        working-directory: linux
+        run: xvfb-run -a -s "-screen 0 1280x800x24" python3 -m pytest -v
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-22.04'   # one copy of each asset is enough
+        with:
+          name: linux-assets
+          path: dist/*
+
+  release:
+    needs: [version, windows, linux]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
       - name: Publish release
-        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:GITHUB_REF_NAME dist\TempFileEraserTool-Setup.exe dist\TempFileEraserTool-Script.zip --title $env:GITHUB_REF_NAME --generate-notes
+        run: |
+          ls -la assets
+          gh release create "${{ github.ref_name }}" \
+            assets/TempFileEraserTool-Setup.exe \
+            assets/TempFileEraserTool-Script.zip \
+            assets/TempFileEraserTool-Linux-Script.tar.gz \
+            "assets/temp-file-eraser-tool_${{ needs.version.outputs.version }}_all.deb" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

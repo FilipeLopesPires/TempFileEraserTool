@@ -2,7 +2,8 @@
 
 BeforeDiscovery {
     # Installer edition tests need a built installer: .\build\build.ps1
-    $setupMissing = -not (Test-Path (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\TempFileEraserTool-Setup.exe'))
+    $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+    $setupMissing = -not (Test-Path (Join-Path $repoRoot 'dist\TempFileEraserTool-Setup.exe'))
 }
 
 # These tests install and uninstall the real tool on this machine.
@@ -10,12 +11,13 @@ BeforeDiscovery {
 
 BeforeAll {
     $repo                  = Split-Path $PSScriptRoot -Parent
+    $root                  = Split-Path $repo -Parent
     $folderMenuKey         = 'HKCU:\Software\Classes\Directory\shell\TempFileEraserTool'
     $backgroundMenuKey     = 'HKCU:\Software\Classes\Directory\Background\shell\TempFileEraserTool'
     $scriptDir             = Join-Path $env:LOCALAPPDATA 'TempFileEraserTool'
     $installerDir          = Join-Path $env:LOCALAPPDATA 'Programs\TempFileEraserTool'
     $installerUninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{1B36309B-F347-4709-98CD-45D80C17AB47}_is1'
-    $workerFiles           = 'Clear-TempFolders.ps1', 'TempFolderRules.ps1', 'TempFolderScanner.ps1', 'TempFolderRemover.ps1'
+    $workerFiles           = 'Clear-TempFolders.ps1', 'TempFolderRules.ps1', 'TempFolderScanner.ps1', 'TempFolderRemover.ps1', 'rules.json'
 
     function Wait-Condition {
         param([Parameter(Mandatory)][scriptblock]$Condition, [int]$TimeoutSeconds = 30)
@@ -70,7 +72,8 @@ Describe 'Script edition' -Tag Integration {
         $flat = Join-Path $TestDrive 'flat'
         New-Item -ItemType Directory $flat | Out-Null
         Copy-Item (Join-Path $repo 'script\install.ps1') $flat
-        foreach ($file in $workerFiles) { Copy-Item (Join-Path $repo "src\$file") $flat }
+        Copy-Item (Join-Path $repo 'src\*.ps1') $flat
+        Copy-Item (Join-Path $root 'rules\rules.json') $flat
 
         & (Join-Path $flat 'install.ps1') | Out-Null
 
@@ -94,7 +97,7 @@ Describe 'Script edition' -Tag Integration {
 Describe 'Installer edition' -Tag Integration -Skip:$setupMissing {
     BeforeAll {
         Reset-TempFileEraserTool
-        $setup = Join-Path $repo 'dist\TempFileEraserTool-Setup.exe'
+        $setup = Join-Path $root 'dist\TempFileEraserTool-Setup.exe'
 
         function Invoke-Setup {
             Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait

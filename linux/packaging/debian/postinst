@@ -1,0 +1,32 @@
+#!/bin/sh
+# Take over from a script-edition install, so there are never two menu entries.
+set -e
+
+if [ "$1" = "configure" ]; then
+    for home in /home/*; do
+        [ -d "$home" ] || continue
+        rm -rf "$home/.local/share/temp-file-eraser"
+        rm -f "$home/.local/bin/temp-file-eraser" \
+              "$home/.local/share/nautilus-python/extensions/temp-file-eraser-nautilus.py" \
+              "$home/.local/share/nautilus/scripts/Clean up temp and cache folders" \
+              "$home/.local/share/applications/temp-file-eraser.desktop"
+        rm -f "$home"/.local/share/nautilus-python/extensions/__pycache__/temp-file-eraser-nautilus.*.pyc
+    done
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+    # Recommends installs this by default; --no-install-recommends does not
+    if ls /usr/lib/*/nautilus/extensions-*/libnautilus-python.so >/dev/null 2>&1; then
+        echo 'Right-click a folder and choose "Clean up temp and cache folders".'
+        echo 'Already running Nautilus? Run "nautilus -q" once so it loads the new entry.'
+    else
+        echo 'Note: python3-nautilus is not installed, so there is no right-click entry'
+        echo 'in Nautilus yet. Add it with:'
+        echo '    sudo apt install python3-nautilus && nautilus -q'
+        echo 'Until then the tool is available as "Open With" on a folder, and as:'
+        echo '    temp-file-eraser /path/to/folder'
+    fi
+fi
+
+exit 0

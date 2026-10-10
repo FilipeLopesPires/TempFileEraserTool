@@ -12,7 +12,11 @@ menu entry.
 | 3 | Custom rules | Users who want to add or switch off detection rules | Idea |
 | 4 | Modern menu | Users who want the entry at the top of the Windows 11 menu | Idea |
 
-None of the tiers need administrator rights.
+Tiers 1 and 2 need no administrator rights.
+
+The Linux edition has its own two tiers, both available: a script edition (`install.sh`, no
+root) and a package edition (`.deb`, listed in Software). See
+[linux/README.md](linux/README.md).
 
 ## Tier 1: Script edition (available)
 
@@ -39,14 +43,15 @@ The same tool, delivered as a standard Windows setup program built with Inno Set
 
 ## Tier 3: Custom rules (idea)
 
-The detection rules are already data (`src/TempFolderRules.ps1`). A user rules file would
-make them adjustable without editing the tool:
+The detection rules are already data, in [rules/rules.json](rules/rules.json), read by both
+platforms. A user rules file would make them adjustable without editing the tool:
 
 - add folder or file names, with or without a project marker next to them;
 - switch off a built-in rule, for example to keep `.idea` folders;
 - exclude specific paths from every scan.
 
-A command-line listing mode (`-WhatIf`) would fit here too, for use in scripts.
+A command-line listing mode (`-WhatIf`) would fit here too, for use in scripts. The Linux
+edition already has one: `temp-file-eraser PATH --list`.
 
 ## Tier 4: Modern menu (idea)
 
@@ -56,15 +61,21 @@ The entry appears at the top level of the Windows 11 context menu, with no need 
 - an `IExplorerCommand` shell extension (a small C++ DLL);
 - an MSIX package with identity, signed through the Microsoft Store or Azure Trusted Signing.
 
+This tier has no Linux equivalent: the Nautilus extension is already at the top level of the
+menu, with no submenu to open first.
+
 ## Known limitations (all tiers)
 
 - If your organisation enforces a PowerShell execution policy through Group Policy, the menu
-  command may be blocked.
+  command may be blocked. (Windows)
 - The Recycle Bin has a size limit. When a folder is too big for it, Windows asks whether to
   delete it permanently instead. Paths longer than 260 characters cannot go to the Recycle
-  Bin; use **Erase permanently** for those.
+  Bin; use **Erase permanently** for those. (Windows)
+- Not every filesystem has a trash folder, typically FAT and exFAT drives. The tool says so
+  and suggests erasing permanently instead. (Linux)
 - Files that a running program keeps open (an IDE, a dev server, Unity or Unreal) cannot be
-  removed. They are listed as failures in the summary. Close the program and run the tool
-  again.
-- Sizes count every file once. Hard links, which pnpm uses for its package store, can make
-  the space actually freed smaller than shown.
+  removed on Windows. They are listed as failures in the summary. Close the program and run
+  the tool again.
+- On Windows, sizes count every file once. Hard links, which pnpm uses for its package store,
+  can make the space actually freed smaller than shown. The Linux edition counts hardlinked
+  files once and does not have this problem.

@@ -18,15 +18,18 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Version = (Get-Content (Join-Path (Split-Path $PSScriptRoot -Parent) 'VERSION') -TotalCount 1).Trim(),
+    [string]$Version = (Get-Content (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VERSION') -TotalCount 1).Trim(),
 
-    [string]$OutputDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist'),
+    [string]$OutputDir = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'dist'),
 
     [switch]$SkipInstaller
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path $PSScriptRoot -Parent
+# $windows holds the Windows edition; $root also holds rules\ and VERSION, which
+# the Linux edition shares
+$windows = Split-Path $PSScriptRoot -Parent
+$root = Split-Path $windows -Parent
 
 # Checked here rather than with ValidatePattern, which skips default values
 if ($Version -notmatch '^\d+\.\d+\.\d+$') {
@@ -40,9 +43,10 @@ New-Item -ItemType Directory -Path $OutputDir | Out-Null
 $staging = Join-Path $OutputDir 'script-staging'
 New-Item -ItemType Directory -Path $staging | Out-Null
 Copy-Item -Destination $staging -LiteralPath (@(
-        (Join-Path $repo 'script\install.ps1'),
-        (Join-Path $repo 'script\uninstall.ps1')) +
-    @(Get-ChildItem -LiteralPath (Join-Path $repo 'src') -Filter '*.ps1' | ForEach-Object FullName))
+        (Join-Path $windows 'script\install.ps1'),
+        (Join-Path $windows 'script\uninstall.ps1'),
+        (Join-Path $root 'rules\rules.json')) +
+    @(Get-ChildItem -LiteralPath (Join-Path $windows 'src') -Filter '*.ps1' | ForEach-Object FullName))
 Compress-Archive -Path (Join-Path $staging '*') -DestinationPath (Join-Path $OutputDir 'TempFileEraserTool-Script.zip')
 Remove-Item -LiteralPath $staging -Recurse -Force
 Write-Host "Built $(Join-Path $OutputDir 'TempFileEraserTool-Script.zip')"
@@ -57,6 +61,6 @@ $iscc = @(
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 if (-not $iscc) { throw 'Inno Setup 6 was not found. Install it with: winget install JRSoftware.InnoSetup' }
 
-& $iscc "/DAppVersion=$Version" "/O$OutputDir" (Join-Path $repo 'installer\TempFileEraserTool.iss')
+& $iscc "/DAppVersion=$Version" "/O$OutputDir" (Join-Path $windows 'installer\TempFileEraserTool.iss')
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compiler failed with exit code $LASTEXITCODE" }
 Write-Host "Built $(Join-Path $OutputDir 'TempFileEraserTool-Setup.exe')"

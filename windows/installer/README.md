@@ -26,6 +26,6 @@ Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSo
 .\build\build.ps1
 ```
 
-The version comes from the [VERSION](../VERSION) file. The output is `dist\TempFileEraserTool-Setup.exe` and `dist\TempFileEraserTool-Script.zip`.
+The version comes from the [VERSION](../../VERSION) file. The output is `dist\TempFileEraserTool-Setup.exe` and `dist\TempFileEraserTool-Script.zip`.
 The definition is in [TempFileEraserTool.iss](TempFileEraserTool.iss). Never change its
 `AppId`.

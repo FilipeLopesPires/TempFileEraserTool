@@ -1,0 +1,5 @@
+#!/bin/sh
+# Launcher for the package edition. The script edition generates its own.
+PYTHONPATH="/usr/lib/temp-file-eraser${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+exec python3 -m tempfileeraser "$@"

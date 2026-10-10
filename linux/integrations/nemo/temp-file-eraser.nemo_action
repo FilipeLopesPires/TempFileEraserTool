@@ -1,0 +1,8 @@
+[Nemo Action]
+Name=Clean up temp and cache folders
+Comment=Find regenerable temp, cache and build folders below this folder
+Exec=temp-file-eraser %F
+Icon-Name=user-trash
+Selection=S
+Extensions=dir;
+Quote=double

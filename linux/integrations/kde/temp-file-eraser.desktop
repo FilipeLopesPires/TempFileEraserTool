@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin,inode/directory
+MimeType=inode/directory;
+Actions=cleanTempFolders;
+X-KDE-Priority=TopLevel
+
+[Desktop Action cleanTempFolders]
+Name=Clean up temp and cache folders
+Icon=user-trash
+Exec=temp-file-eraser %f

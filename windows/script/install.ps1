@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 
 $toolDir     = Join-Path $env:LOCALAPPDATA 'TempFileEraserTool'
 $worker      = Join-Path $toolDir 'Clear-TempFolders.ps1'
-$workerFiles = 'Clear-TempFolders.ps1', 'TempFolderRules.ps1', 'TempFolderScanner.ps1', 'TempFolderRemover.ps1'
+$workerFiles = 'Clear-TempFolders.ps1', 'TempFolderRules.ps1', 'TempFolderScanner.ps1', 'TempFolderRemover.ps1', 'rules.json'
 $menuVerb    = 'Clean up temp and cache folders'
 $menuIcon    = '%SystemRoot%\System32\cleanmgr.exe,0'
 # Explorer passes the clicked folder as %1, and the folder being browsed as %V
@@ -30,16 +30,24 @@ if (Test-Path -LiteralPath $installerEditionKey) {
     throw 'The Installer edition of TempFileEraserTool is already installed. Keep using it, or uninstall it from Settings > Apps before installing the Script edition.'
 }
 
-# Release zip: the workers sit next to this script. Repository clone: they are in ..\src
-$sourceDir = @($PSScriptRoot, (Join-Path $PSScriptRoot '..\src')) |
-    Where-Object { Test-Path -LiteralPath (Join-Path $_ 'Clear-TempFolders.ps1') } |
-    Select-Object -First 1
-if (-not $sourceDir) { throw 'Clear-TempFolders.ps1 was not found next to install.ps1 or in ..\src.' }
+# Release zip: every file sits next to this script. Repository clone: the workers
+# are in ..\src and the rule table in ..\rules
+$searchDirs = @($PSScriptRoot, (Join-Path $PSScriptRoot '..\src'), (Join-Path $PSScriptRoot '..\..\rules'))
+
+function Resolve-SourceFile {
+    param([Parameter(Mandatory)][string]$Name)
+
+    foreach ($dir in $searchDirs) {
+        $candidate = Join-Path $dir $Name
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    throw "$Name was not found next to install.ps1, in ..\src or in ..\..\rules."
+}
 
 New-Item -ItemType Directory -Path $toolDir -Force | Out-Null
 foreach ($file in $workerFiles) {
     $target = Join-Path $toolDir $file
-    Copy-Item -LiteralPath (Join-Path $sourceDir $file) -Destination $target -Force
+    Copy-Item -LiteralPath (Resolve-SourceFile $file) -Destination $target -Force
     # Files extracted from a downloaded zip carry the "downloaded from the internet" mark
     Unblock-File -LiteralPath $target
 }
